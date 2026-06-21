@@ -2,6 +2,9 @@
   publish = "."
   functions = "netlify/functions"
 
+[functions]
+  timeout = 20
+
 # Frontend calls /api/* — route them to the matching function name.
 [[redirects]]
   from = "/api/*"

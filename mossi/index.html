@@ -576,20 +576,21 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
   const [userBridgeDraft, setUserBridgeDraft] = useState('');
 
   // step 1: fetch associations whenever the word changes
-  useEffect(() => {
+  const [assocFailed, setAssocFailed] = useState(false);
+  const fetchAssocs = useCallback(() => {
     let alive = true;
     setAssocs(null); setSelected(null); setExplanation(null); setCustomDraft('');
-    setUserBridge(''); setUserBridgeDraft('');
+    setUserBridge(''); setUserBridgeDraft(''); setAssocFailed(false);
     callApi('/api/associate', { word, challenge }).then(r => {
       if (!alive) return;
-      const list = (r && Array.isArray(r.associations)) ? r.associations.slice(0, 10) : [
-        'drawn to light', 'removed when done', 'temporary', 'climbable', 'holds something up',
-        'exposed to weather', 'ugly but necessary', 'public structure',
-      ];
-      setAssocs(list);
+      const list = (r && Array.isArray(r.associations) && r.associations.length > 0)
+        ? r.associations.slice(0, 10) : [];
+      if (list.length === 0) { setAssocFailed(true); setAssocs([]); }
+      else setAssocs(list);
     });
     return () => { alive = false; };
   }, [word, challenge]);
+  useEffect(() => { return fetchAssocs(); }, [fetchAssocs]);
 
   const pickAssoc = (a) => {
     if (!a || a === selected) return;
@@ -628,6 +629,8 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
       {/* step 2: associations — typed inline like the opening, each association clickable */}
       {assocs === null
         ? <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink/40 py-2">mining…<span className="caret">▍</span></div>
+        : assocFailed
+        ? <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink/40 py-2">couldn't reach ai · <button onClick={fetchAssocs} className="underline hover:text-ink">try again</button></div>
         : <TypedAssocs word={word} items={assocs} selected={selected} onPick={pickAssoc}/>}
 
       {/* add-your-own */}
