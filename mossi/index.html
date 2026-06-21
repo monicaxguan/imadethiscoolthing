@@ -541,12 +541,12 @@ function ArenaImages({ keyword }) {
   );
 }
 
-function TypedExplanation({ word, association, text }) {
+function TypedExplanation({ word, association, text, onDone }) {
   // type one bridging paragraph
   const [shown, setShown] = useState(0);
   useEffect(() => { setShown(0); }, [word, association, text]);
   useEffect(() => {
-    if (shown >= (text||'').length) return;
+    if (shown >= (text||'').length) { onDone && onDone(); return; }
     const t = setTimeout(() => setShown(s => s + 1), 16 + Math.random()*14);
     return () => clearTimeout(t);
   }, [shown, text]);
@@ -570,6 +570,7 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
   const [selected, setSelected] = useState(null);
   const [explanation, setExplanation] = useState(null);
   const [explanationLoading, setExplanationLoading] = useState(false);
+  const [explanationDone, setExplanationDone] = useState(false);
   const [customDraft, setCustomDraft] = useState('');
   const [userBridge, setUserBridge] = useState('');
   const [userBridgeDraft, setUserBridgeDraft] = useState('');
@@ -595,6 +596,7 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
     setSelected(a);
     setExplanation(null);
     setExplanationLoading(true);
+    setExplanationDone(false);
     setUserBridge(''); setUserBridgeDraft('');
     callApi('/api/connect', { word, challenge, association: a }).then(r => {
       setExplanation((r && typeof r.explanation === 'string') ? r.explanation : '');
@@ -655,14 +657,14 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
           )}
 
           {!explanationLoading && explanation && (
-            <TypedExplanation word={word} association={selected} text={explanation}/>
+            <TypedExplanation word={word} association={selected} text={explanation} onDone={() => setExplanationDone(true)}/>
           )}
 
           {!explanationLoading && explanation === '' && (
             <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink/40">nothing came back · try another association</div>
           )}
 
-          {!explanationLoading && (
+          {explanationDone && (
             <ArenaImages keyword={selected} />
           )}
 
