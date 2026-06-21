@@ -902,7 +902,7 @@ function EntryScreen({ draft, setDraft, onCast, prompts }) {
         onChange={e => setDraft(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && draft.trim()) onCast(draft.trim()); }}
         placeholder="what are you thinking about?"
-        className="bg-transparent outline-none w-full font-sans font-black text-[clamp(26px,5.5vw,81px)] leading-[0.95] tracking-tight text-ink placeholder:text-ink/55 caret-accent"
+        className="bg-transparent outline-none w-full font-sans font-black text-[clamp(52px,5.5vw,81px)] leading-[1.0] tracking-tight text-ink placeholder:text-ink/55 caret-accent"
       />
 
       {/* instruction — small, terser on mobile */}
