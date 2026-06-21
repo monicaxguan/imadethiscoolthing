@@ -4,32 +4,29 @@ const buildPrompt = (word, challenge, association) => (
   `CHALLENGE: "${challenge}"\n` +
   `RANDOM WORD: "${word}"\n` +
   `THE ONE ASSOCIATION TO FORCE: "${association}"\n\n` +
-  "Force that one association onto the challenge. Generate 4 short candidates.\n\n" +
-  "Each candidate is a single line, standing alone — could be a name, a tagline, a " +
-  "structural move, a gesture, a character beat, a mechanism. Whatever actually fits " +
-  "the challenge.\n\n" +
+  "Make the bridge visible — don't solve the challenge. Explain the click between " +
+  "this association and the challenge in 1–3 sentences (25–60 words).\n\n" +
   "HOW:\n" +
-  "- 1–12 words each. Concrete > clever. Picture-able > poetic.\n" +
-  "- Mix the kinds when it helps. Don't return 4 names if a tagline + a move + a name\n" +
-  "  + a mechanism is the better answer.\n" +
-  "- Don't soften the collision. The whole point is that the random word is in the room.\n" +
-  "- Sound like a person talking, not writing copy. Contractions ok. Fragments ok.\n\n" +
+  "- Open mid-thought. No setup. No 'X is a Y for Z'.\n" +
+  "- Show what the association notices about the challenge that nothing else would.\n" +
+  "- Hand the spark over, don't finish it for them. The user does the naming / the move / the rest.\n" +
+  "- Sound like a person talking, not writing copy. Contractions, fragments, the odd 'so' or 'wait —'.\n\n" +
   "Don't use: ritual, lens, reframe, journey, signal, beacon, threshold, witness, " +
   "narrative, vibe, essence, holistic, curated, authentic, meaningful.\n\n" +
   "EXAMPLES:\n" +
   'CHALLENGE "name a sustainable coffee brand" · WORD "post office" · ASSOCIATION "stamped" →\n' +
-  '{ "candidates": ["Stamped, not sprayed", "Return Address Coffee", "Each bag postmarked from a farm", "From: a grower. To: your kitchen."] }\n\n' +
+  '{ "explanation": "Stamps prove a thing came from one specific somewhere, sent by one specific someone. A coffee that wore that — a date, an address, a hand — wouldn\'t taste of \'origin\', it\'d taste of a person who put it in the mail." }\n\n' +
   'CHALLENGE "memorable NPC for a harbour town" · WORD "moth" · ASSOCIATION "attracted to what destroys it" →\n' +
-  '{ "candidates": ["A lamplighter who collects shards of the lighthouse that killed his brother", "An ex-sailor who sits closer to the fire than is safe", "A widow paid to dim lamps the wrong ships steer by", "Sleeps under the harbour beacon every storm"] }\n\n' +
+  '{ "explanation": "If the moth-thing is the pull toward the thing that hurts you, you\'re looking for someone whose job, hobby, or grief lives next to the harbour\'s most dangerous light. They\'d show up wherever the worst story is unfolding. Quietly. Every time." }\n\n' +
   'CHALLENGE "writing a poem about my mother without sentiment" · WORD "scaffold" · ASSOCIATION "ugly but necessary" →\n' +
-  '{ "candidates": ["A list of the pipes and planks she built for me — none of them admired", "Open with the parts the photographer cropped out", "End on what stayed up when the rest came down", "Write only what would be invoiced if she\'d charged"] }\n\n' +
-  "Now do yours. Return JSON only: { \"candidates\": [...] }"
+  '{ "explanation": "Scaffolds disappear once the building stands — nobody photographs them, nobody thanks them. Your mother probably built things like that for you too. The poem isn\'t about her; it\'s about the planks she left up under everything." }\n\n' +
+  "Now do yours. Return JSON only: { \"explanation\": \"...\" }"
 );
 
 export default async (req) => {
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
   const { word = "", challenge = "", association = "" } = await req.json().catch(() => ({}));
   if (!word || !association) return json({ error: "word and association required" }, 400);
-  const r = await claude({ user: buildPrompt(word, challenge, association), maxTokens: 700 });
+  const r = await claude({ user: buildPrompt(word, challenge, association), maxTokens: 400 });
   return json(r.body, r.status);
 };
