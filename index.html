@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Idea Seeds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Inter:wght@300..900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          serif: ['Fraunces','ui-serif','Georgia','serif'],
+          sans:  ['Inter','ui-sans-serif','system-ui','sans-serif'],
+          mono:  ['Inter','ui-sans-serif','system-ui','sans-serif'],
+          emoji: ['"Apple Color Emoji"','"Segoe UI Emoji"','"Noto Color Emoji"','sans-serif'],
+        },
+        colors: {
+          ink: '#0e0d0a', paper:'#f1ebdc', accent:'#ff4d1a', lemon:'#f3d749',
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html, body, #root { height:100%; }
+  body { background:#f4f5f7; color:#0e0d0a; font-family:'Inter',sans-serif; }
+  .grain::before { content:""; }
+  .no-scrollbar::-webkit-scrollbar { display:none } .no-scrollbar { scrollbar-width:none }
+  .clickable-word {
+    cursor: pointer;
+    transition: font-family 0s, font-style 0s, color 0.12s;
+    display: inline-block;
+  }
+  .clickable-word:hover, .clickable-word.active {
+    font-family: 'Fraunces', ui-serif, Georgia, serif !important;
+    font-style: italic;
+    font-weight: 900;
+  }
+  .clickable-word.active { color: #ff4d1a; }
+  .marker-yellow { background: linear-gradient(180deg, transparent 60%, #f3d749 60% 92%, transparent 92%); padding: 0 4px; }
+  .inline-emoji {
+    font-family: 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;
+    display: inline-block;
+    vertical-align: -0.08em;
+    line-height: 1;
+    margin: 0 0.05em;
+  }
+  .caret { animation: blink 1s infinite; }
+  @keyframes blink { 0%, 50% { opacity: 0.6 } 51%, 100% { opacity: 0 } }
+
+</style>
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script>
+  (function(){
+    var React;
+    function ensure(){ React = React || window.React; }
+    var motionProxy = new Proxy({}, {
+      get: function(_, tag){
+        ensure();
+        return React.forwardRef(function(props, ref){
+          var p = Object.assign({}, props);
+          ['initial','animate','exit','transition','variants','whileHover','whileTap',
+           'whileInView','viewport','layout','layoutId','drag','dragConstraints',
+           'onAnimationStart','onAnimationComplete','onDragEnd','onDragStart','onTap'].forEach(function(k){ delete p[k]; });
+          p.ref = ref;
+          return React.createElement(tag, p);
+        });
+      }
+    });
+    function AnimatePresence(props){ return props.children || null; }
+    window.Motion = { motion: motionProxy, AnimatePresence: AnimatePresence };
+    window.framerMotion = window.Motion;
+  })();
+</script>
+<script src="https://unpkg.com/@babel/standalone@7.23.7/babel.min.js"></script>
+</head>
+<body class="grain">
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+const { createRoot } = ReactDOM;
+const { motion, AnimatePresence } = window.framerMotion || window.FramerMotion || window.Motion || {};
+
+// ─────────────────────────── emoji map ───────────────────────────
+
+const EMOJI_RULES = [
+  // challenge themes — diversified, no ✨/⭐ filler
+  { re:/coffee|espresso|cafe|café|roast|brew|bean/i,           list:['☕','🫘','🌅','🍩','🥐','🥛','🫖','🍵','🟤'] },
+  { re:/youtube|video|channel|series|podcast|stream/i,         list:['📺','🎥','🎬','📹','🔴','🎙️','🍿','📡'] },
+  { re:/accounting|finance|tax|money|bank|invoice|ledger/i,    list:['🧮','💰','📊','📒','🪙','💵','🏦','📈','💹'] },
+  { re:/news|magazine|editorial|press|journal|newspaper/i,     list:['📰','✉️','🖋️','📜','🗞️','📑','📌'] },
+  { re:/sleep|rest|bed|dream|night|pillow|insomnia/i,          list:['😴','🌙','🛌','💤','🦉','🧸','🛏️','🌃'] },
+  { re:/food|meal|kitchen|cook|restaurant|recipe|bake/i,       list:['🍽️','🥖','🔥','🌿','🧂','🥘','🍅','🧄','🥣'] },
+  { re:/health|medical|doctor|wellness|therapy|hospital/i,     list:['🩺','💊','🧘','🌸','🩹','🏥','🌱'] },
+  { re:/music|song|band|album|sound|audio/i,                   list:['🎵','🎶','🎸','📻','🎤','🥁','🎹','🎷'] },
+  { re:/book|novel|writing|poetry|author|story/i,              list:['📖','✒️','📝','🕯️','📚','📓','✏️','🗒️'] },
+  { re:/game|play|toy|arcade|puzzle|board/i,                   list:['🎲','🎮','🃏','🎯','🎪','🧩','🕹️','♟️'] },
+  { re:/fashion|clothing|wear|design|style|garment/i,          list:['👗','🧵','👠','✂️','🪡','👒','🧥','👜'] },
+  { re:/travel|tourism|trip|journey|airline|hotel/i,           list:['✈️','🗺️','🧳','🌍','📷','🚉','🛂','🪪'] },
+  // single-word objects (no overlapping fillers)
+  { re:/lighthouse|beacon|signal/i,        list:['🗼','🌊','🚨','🔦'] },
+  { re:/origami/i,                          list:['📄','🦢','🦋'] },
+  { re:/tectonics|volcano|earthquake/i,     list:['🌋','🪨','🌎'] },
+  { re:/grandmother|grandma|granny/i,       list:['👵','🧶','🍪','🪑'] },
+  { re:/sonar|whale|dolphin/i,              list:['🐬','🐋','📡'] },
+  { re:/blacksmith|forge|anvil/i,           list:['🔨','🛠️','⚒️'] },
+  { re:/library|book|read/i,                list:['📚','🔖','🪑','🪜'] },
+  { re:/typewriter|keyboard/i,              list:['⌨️','📜','🖨️'] },
+  { re:/submarine|ship|boat/i,              list:['🚢','⛵','⚓','🛟'] },
+  { re:/beekeeper|bee|hive|honey/i,         list:['🐝','🍯','🌼','🪻'] },
+  { re:/metronome|clock|time/i,             list:['⏱️','⏰','🕰️'] },
+  { re:/observatory|telescope|astron/i,     list:['🔭','🌌','🛰️','🪐'] },
+  { re:/telegram|letter|postcard|mail/i,    list:['✉️','📜','📬','📮'] },
+  { re:/planetarium|planet|galaxy/i,        list:['🪐','🌌','🌑','🌒'] },
+  { re:/cartograph|map/i,                   list:['🗺️','🧭','📍'] },
+  { re:/jellyfish/i,                        list:['🪼','🐡','🪸'] },
+  { re:/accordion/i,                        list:['🪗','🎼'] },
+  { re:/umbrella|rain/i,                    list:['☂️','🌧️','💧'] },
+  { re:/elevator/i,                         list:['🛗','🏢'] },
+  { re:/mailman|postal/i,                   list:['📬','📮','✉️'] },
+  { re:/cathedral|church/i,                 list:['⛪','🕯️','🛐'] },
+  { re:/marathon|run/i,                     list:['🏃','🥇','🏁'] },
+  { re:/glacier|iceberg|frost/i,            list:['🧊','❄️','🏔️'] },
+  { re:/windmill/i,                         list:['🌬️','🌾','🌀'] },
+  { re:/aquarium|fish/i,                    list:['🐠','🐡','🐟','🪸'] },
+  { re:/hourglass/i,                        list:['⏳','⏰'] },
+  { re:/flamingo/i,                         list:['🦩','🌴','🌺'] },
+  { re:/octopus/i,                          list:['🐙','🦑','🪸'] },
+  { re:/catacomb|skull|bone/i,              list:['💀','🦴','🕯️'] },
+  { re:/foghorn|fog/i,                      list:['📯','🌫️'] },
+  { re:/bicycle|bike/i,                     list:['🚲','🛞','🛤️'] },
+  { re:/periscope/i,                        list:['🔭','🚢','👀'] },
+  { re:/greenhouse|garden|plant/i,          list:['🌿','🪴','🌱','🌷'] },
+  { re:/antique/i,                          list:['🕰️','🪑','🗝️'] },
+  { re:/carnival|circus/i,                  list:['🎪','🎡','🎠','🤹'] },
+  { re:/satellite/i,                        list:['🛰️','📡','📶'] },
+  { re:/sundial|sun|dawn|morning/i,         list:['☀️','🌅','🌄','🌞'] },
+  { re:/railroad|train|rail/i,              list:['🚂','🛤️','🚆'] },
+  { re:/tundra|arctic/i,                    list:['❄️','🐻‍❄️','🌨️'] },
+  { re:/compass|navigation/i,               list:['🧭','🗺️','📍'] },
+  { re:/barnacle/i,                         list:['🦪','🪸','🐚'] },
+  { re:/meteor|comet/i,                     list:['☄️','🌠'] },
+  { re:/wagon|cart/i,                       list:['🛒','🐴','🛞'] },
+  { re:/xylophone/i,                        list:['🎼','🎵','🪘'] },
+  { re:/knapsack|backpack/i,                list:['🎒','⛰️','🥾'] },
+  { re:/foxglove|fox/i,                     list:['🦊','🌸','🌾'] },
+  { re:/farrier|horse|hoof/i,               list:['🐴','🐎','🔨'] },
+  { re:/cobbler|shoe/i,                     list:['👞','🥾','🧵'] },
+  { re:/swamp|gator/i,                      list:['🐊','🌿','🪷'] },
+  { re:/rope|knot/i,                        list:['🪢','⚓','🪜'] },
+  { re:/choir|sing/i,                       list:['🎤','🎶','🎼'] },
+  { re:/quarry|stone|rock/i,                list:['⛏️','🪨','🧱'] },
+  { re:/lantern|lamp/i,                     list:['🏮','💡','🕯️'] },
+  // generic words — narrower so they don't dominate
+  { re:/star|spark|shine/i,                 list:['⭐','✨','🌟','💫'] },
+  { re:/cloud|memory|dream/i,               list:['☁️','💭','🌥️'] },
+  { re:/wave|water|ocean/i,                 list:['🌊','💧','🫧'] },
+  { re:/eye|watch|witness/i,                list:['👁️','👀','🔍'] },
+  { re:/heart|love/i,                       list:['❤️','💖','🩷'] },
+  { re:/flower|bloom/i,                     list:['🌸','🌼','🌷','🌻'] },
+  { re:/fire|flame/i,                       list:['🔥','🕯️','🪵'] },
+  { re:/moon|night/i,                       list:['🌙','🌝','🌚'] },
+  { re:/key|secret/i,                       list:['🗝️','🔑','🤫'] },
+  { re:/hand|touch/i,                       list:['✋','🤲','👋'] },
+  { re:/bird|fly/i,                         list:['🐦','🪶','🕊️'] },
+];
+
+// big, varied fallback so words without a matching rule don't keep pulling sparkles
+const EMOJI_FALLBACK = [
+  '🪞','🪶','🌾','🪴','🧶','🧭','🕊️','🦋','🐌','🌗','🪐','🍃','🪨','🎈','🪁','🫧',
+  '🪺','🪻','🍄','🐞','🐢','🐝','🦔','🍎','🍐','🌶️','🌽','🧊','🌰','🐇','🐦','☂️',
+  '🛎️','🎐','🧷','🧵','📌','📎','🖋️','📜','🪟','🧱','🪢','🛟','🍯','🫙','🎏','🪕',
+  '🪘','🪗','🛼','🪄','🪔','🫧','🦩','🦢','🐚','🪸','🌵','🌲','🍂','🪻','🪞','🎏',
+  '🧿','🪬','🔱','⚱️','🏺','🪞','🎭','🪤','🧸','🛍️','🪟','🪜','🪝','🧰','🪛','🔭',
+];
+
+// session-scoped used set — reset per `cast()`/`reset()`
+const _usedEmojis = new Set();
+function _shuffle(a) { const c=[...a]; for (let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [c[i],c[j]]=[c[j],c[i]];} return c; }
+
+function emojisFor(word) {
+  if (!word) return [];
+  for (const r of EMOJI_RULES) if (r.re.test(word)) return r.list;
+  return [];
+}
+function pickEmoji(word, n=1) {
+  const out = [];
+  const list = _shuffle(emojisFor(word) || []);
+  // first try to fill from the rule list, skipping ones already used this session
+  for (const e of list) {
+    if (out.length >= n) break;
+    if (!_usedEmojis.has(e)) out.push(e);
+  }
+  // then fall back to the diverse pool
+  if (out.length < n) {
+    const pool = _shuffle(EMOJI_FALLBACK);
+    for (const e of pool) {
+      if (out.length >= n) break;
+      if (!_usedEmojis.has(e) && !out.includes(e)) out.push(e);
+    }
+  }
+  // last resort — allow repeats from the rule list if everything is exhausted
+  if (out.length < n && list.length) {
+    for (const e of list) {
+      if (out.length >= n) break;
+      if (!out.includes(e)) out.push(e);
+    }
+  }
+  out.forEach(e => _usedEmojis.add(e));
+  return out;
+}
+function resetEmojiUsage() { _usedEmojis.clear(); }
+
+// ─────────────────────────── random pool ───────────────────────────
+// Common, concrete nouns — the kind of word de Bono would point to in a dictionary.
+// No proper nouns, no jargon, no abstractions. If you can't picture it, it doesn't belong.
+
+const RANDOM_POOL = [
+  'lighthouse','origami','grandmother','blacksmith','library','typewriter','submarine','beekeeper','metronome',
+  'observatory','telegram','accordion','umbrella','elevator','postcard','cathedral','glacier','telescope',
+  'windmill','aquarium','hourglass','flamingo','octopus','bicycle','greenhouse','satellite','sundial','beehive',
+  'compass','barnacle','meteor','xylophone','knapsack','swamp','choir','lantern',
+  'anchor','kite','mirror','kettle','marble','button','doorknob','candle','ribbon','balloon','brick','ladder',
+  'thermos','hammock','sandwich','raincoat','fountain','drum','parade','prism','magnet','curtain','harvest',
+  'pinecone','paintbrush','snail','telephone','treehouse','vase','whisper','typewriter','postcard','seashell',
+  'piano','iceberg','onion','clock','pillow','mailbox','cactus','bonfire','helmet','spoon','bookshelf','toaster',
+  'fishing rod','swimming pool','train station','umbrella','rocking chair','crayon','feather','jar','sock',
+  'spider','peacock','tortoise','beetle','firefly','dolphin','whale','butterfly',
+];
+
+const pick = (arr, n) => { const c=[...arr], o=[]; for (let i=0;i<n&&c.length;i++) o.push(c.splice(Math.floor(Math.random()*c.length),1)[0]); return o; };
+
+function pickRandoms(n, exclude = []) {
+  const ex = new Set(exclude.map(w => (w||'').toLowerCase()));
+  const pool = RANDOM_POOL.filter(w => !ex.has(w.toLowerCase()));
+  return pick(pool, n);
+}
+
+async function callApi(path, body) {
+  try { const r = await fetch(path, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)});
+    if (!r.ok) throw 0; return await r.json(); } catch (e) { return null; }
+}
+
+// ─────────────────────────── typewriter ───────────────────────────
+
+function useTyper(text, opts = {}) {
+  const { speed = 22, jitter = 14, startDelay = 0, enabled = true } = opts;
+  const [n, setN] = useState(enabled ? 0 : (text ? text.length : 0));
+  const tRef = useRef();
+  useEffect(() => {
+    if (!enabled) { setN(text ? text.length : 0); return; }
+    setN(0);
+    let i = 0;
+    const tick = () => {
+      i++; setN(i);
+      if (i < (text||'').length) tRef.current = setTimeout(tick, speed + Math.random()*jitter);
+    };
+    const start = setTimeout(tick, startDelay);
+    return () => { clearTimeout(start); clearTimeout(tRef.current); };
+  }, [text, enabled]);
+  return { shown: (text||'').slice(0, n), done: n >= (text||'').length };
+}
+
+function TypedText({ text, speed, jitter, startDelay, enabled=true, caret=true, className, style }) {
+  const { shown, done } = useTyper(text || '', { speed, jitter, startDelay, enabled });
+  return (
+    <span className={className} style={style}>
+      {shown}
+      {caret && !done && <span className="caret">▍</span>}
+    </span>
+  );
+}
+
+// ─────────────────────────── components ───────────────────────────
+
+function ChallengeIntro({ challenge, emojis, onPick, picked, words, onCast }) {
+  // build the flowing sentence: "challenge {e1}. word1. {e2} word2. ..."
+  // each `wordX` is clickable
+  return (
+    <div className="font-sans font-black text-[clamp(30px,5.25vw,81px)] leading-[0.95] tracking-tight text-ink">
+      <span>{challenge}</span>
+      <span>.</span>{' '}
+      {emojis[0] && <span className="inline-emoji" style={{ fontSize:'0.85em' }}>{emojis[0]}</span>}
+      {' '}
+      {words.map((w, i) => (
+        <React.Fragment key={w.id}>
+          <span
+            onClick={() => onPick(w.id)}
+            className={`clickable-word ${picked === w.id ? 'active' : ''}`}
+          >{w.label}</span>
+          <span>.</span>{' '}
+          {w.emojis && w.emojis.map((e, j) => (
+            <span key={j} className="inline-emoji" style={{ fontSize: j===0 ? '0.95em' : '0.7em' }}>{e}</span>
+          ))}
+          {i < words.length - 1 && ' '}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+function TypedSentence({ challenge, challengeEmojis, words, onPick, picked, onReady }) {
+  // we type out the whole sentence in segments so emojis can appear inline as they're reached
+  const segments = useMemo(() => {
+    const out = [{ kind:'text', text: challenge + '.' }];
+    if (challengeEmojis[0]) out.push({ kind:'emoji', text: ' ' + challengeEmojis[0] + ' ' });
+    words.forEach((w) => {
+      out.push({ kind:'word', text: ' ' + w.label + '.', word: w });
+      (w.emojis || []).forEach((e, j) => out.push({ kind:'emoji', text: ' ' + e + ' ' }));
+    });
+    return out;
+  }, [challenge, challengeEmojis, words]);
+
+  // type segment-by-segment but each text segment letter-by-letter
+  const [segIdx, setSegIdx] = useState(0);
+  const [letterCount, setLetterCount] = useState(0);
+  // only reset when the challenge changes — appended words should pick up from where we left off
+  useEffect(() => {
+    setSegIdx(0); setLetterCount(0);
+  }, [challenge]);
+  useEffect(() => {
+    if (segIdx >= segments.length) { onReady && onReady(); return; }
+    const seg = segments[segIdx];
+    if (seg.kind === 'emoji') {
+      const t = setTimeout(() => { setSegIdx(i => i + 1); setLetterCount(0); }, 220);
+      return () => clearTimeout(t);
+    }
+    if (letterCount < seg.text.length) {
+      const t = setTimeout(() => setLetterCount(c => c + 1), seg.kind === 'word' ? 36 + Math.random()*30 : 22 + Math.random()*20);
+      return () => clearTimeout(t);
+    } else {
+      const t = setTimeout(() => { setSegIdx(i => i + 1); setLetterCount(0); }, 90);
+      return () => clearTimeout(t);
+    }
+  }, [segIdx, letterCount, segments]);
+
+  const done = segIdx >= segments.length;
+
+  return (
+    <div className="font-sans font-black text-[clamp(30px,5.25vw,81px)] leading-[0.95] tracking-tight text-ink">
+      {segments.map((seg, i) => {
+        if (i > segIdx) return null;
+        const partial = i === segIdx ? seg.text.slice(0, letterCount) : seg.text;
+        if (!partial) return null;
+        if (seg.kind === 'emoji') {
+          return <span key={i} className="inline-emoji" style={{ fontSize:'0.85em' }}>{partial.trim()}</span>;
+        }
+        if (seg.kind === 'word') {
+          // clickable, but only after fully typed
+          const fullyTyped = i < segIdx || (i === segIdx && letterCount >= seg.text.length);
+          if (fullyTyped) {
+            // skip leading space, render space then clickable word with trailing period
+            const m = seg.text.match(/^(\s*)(\S+?)(\.+)\s*$/);
+            if (m) {
+              return (
+                <React.Fragment key={i}>
+                  <span>{m[1]}</span>
+                  <span
+                    onClick={() => onPick(seg.word.id)}
+                    className={`clickable-word ${picked === seg.word.id ? 'active' : ''}`}
+                  >{m[2]}</span>
+                  <span>{m[3]} </span>
+                </React.Fragment>
+              );
+            }
+          }
+          return <span key={i}>{partial}</span>;
+        }
+        return <span key={i}>{partial}</span>;
+      })}
+      {!done && <span className="caret">▍</span>}
+    </div>
+  );
+}
+
+function AddOwnWord({ onAdd }) {
+  const [v, setV] = useState('');
+  return (
+    <div className="mt-8 flex items-baseline gap-3">
+      <span className="font-sans font-black text-[clamp(20px,2.6vw,38px)] leading-none text-ink/25 select-none">+</span>
+      <input
+        value={v}
+        onChange={e => setV(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && v.trim()) { onAdd(v); setV(''); } }}
+        placeholder="add your own word"
+        className="bg-transparent outline-none font-sans font-black text-[clamp(20px,2.6vw,38px)] leading-none tracking-tight border-b border-ink/25 focus:border-ink pb-1 flex-1 max-w-[480px] placeholder:text-ink/25"
+      />
+    </div>
+  );
+}
+
+function TypedAssocs({ word, items, selected, onPick }) {
+  // build the sentence: "what does a {word} do? — {a1} · {a2} · {a3}..."
+  const segments = useMemo(() => {
+    const segs = [{ kind:'text', text: `what does a ${word} do? — ` }];
+    items.forEach((a, i) => {
+      segs.push({ kind:'assoc', text: a, assoc: a });
+      if (i < items.length - 1) segs.push({ kind:'text', text: ' · ' });
+    });
+    return segs;
+  }, [word, items]);
+
+  const [segIdx, setSegIdx] = useState(0);
+  const [letterCount, setLetterCount] = useState(0);
+  // reset only when the word changes — appended associations (custom adds) pick up where we left off
+  useEffect(() => { setSegIdx(0); setLetterCount(0); }, [word]);
+  useEffect(() => {
+    if (segIdx >= segments.length) return;
+    const seg = segments[segIdx];
+    if (letterCount < seg.text.length) {
+      const t = setTimeout(
+        () => setLetterCount(c => c + 1),
+        seg.kind === 'assoc' ? 26 + Math.random()*18 : 18 + Math.random()*14
+      );
+      return () => clearTimeout(t);
+    } else {
+      const t = setTimeout(() => { setSegIdx(i => i + 1); setLetterCount(0); }, 70);
+      return () => clearTimeout(t);
+    }
+  }, [segIdx, letterCount, segments]);
+
+  const done = segIdx >= segments.length;
+
+  return (
+    <div className="font-sans font-black text-[clamp(18px,2.6vw,38px)] leading-[1.15] tracking-tight text-ink">
+      {segments.map((seg, i) => {
+        if (i > segIdx) return null;
+        const partial = i === segIdx ? seg.text.slice(0, letterCount) : seg.text;
+        if (!partial) return null;
+        if (seg.kind === 'assoc') {
+          const fullyTyped = i < segIdx || (i === segIdx && letterCount >= seg.text.length);
+          if (fullyTyped) {
+            return (
+              <span
+                key={i}
+                onClick={() => onPick(seg.assoc)}
+                className={`clickable-word ${selected === seg.assoc ? 'active' : ''}`}
+              >{seg.text}</span>
+            );
+          }
+          return <span key={i}>{partial}</span>;
+        }
+        return <span key={i}>{partial}</span>;
+      })}
+      {!done && <span className="caret">▍</span>}
+    </div>
+  );
+}
+
+function TypedCandidates({ word, association, items }) {
+  // type the bridge as one flowing paragraph: each candidate inline, separated by ` · `
+  const segments = useMemo(() => {
+    const segs = [{ kind:'lead', text: `so — ` }];
+    items.forEach((c, i) => {
+      segs.push({ kind:'candidate', text: c });
+      if (i < items.length - 1) segs.push({ kind:'sep', text: ' · ' });
+    });
+    return segs;
+  }, [word, association, items]);
+
+  const [segIdx, setSegIdx] = useState(0);
+  const [letterCount, setLetterCount] = useState(0);
+  useEffect(() => { setSegIdx(0); setLetterCount(0); }, [word, association]);
+  useEffect(() => {
+    if (segIdx >= segments.length) return;
+    const seg = segments[segIdx];
+    if (letterCount < seg.text.length) {
+      const t = setTimeout(
+        () => setLetterCount(c => c + 1),
+        seg.kind === 'candidate' ? 16 + Math.random()*12 : 22 + Math.random()*16
+      );
+      return () => clearTimeout(t);
+    } else {
+      const t = setTimeout(() => { setSegIdx(i => i + 1); setLetterCount(0); }, seg.kind === 'candidate' ? 220 : 60);
+      return () => clearTimeout(t);
+    }
+  }, [segIdx, letterCount, segments]);
+
+  const done = segIdx >= segments.length;
+
+  return (
+    <div className="font-sans font-black text-[clamp(21px,3vw,42px)] leading-[1.1] tracking-tight text-ink">
+      {segments.map((seg, i) => {
+        if (i > segIdx) return null;
+        const partial = i === segIdx ? seg.text.slice(0, letterCount) : seg.text;
+        if (!partial) return null;
+        if (seg.kind === 'lead') {
+          return <span key={i} className="text-ink/40">{partial}</span>;
+        }
+        if (seg.kind === 'sep') {
+          return <span key={i} className="text-accent">{partial}</span>;
+        }
+        return <span key={i} className="text-ink">{partial}</span>;
+      })}
+      {!done && <span className="caret">▍</span>}
+    </div>
+  );
+}
+
+function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose }) {
+  const emoji = useMemo(() => (emojisFor(word) || EMOJI_FALLBACK)[0], [word]);
+  const [assocs, setAssocs] = useState(null);          // null = loading, [] = empty, [...] = ready
+  const [selected, setSelected] = useState(null);
+  const [candidates, setCandidates] = useState(null);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [customDraft, setCustomDraft] = useState('');
+
+  // step 1: fetch associations whenever the word changes
+  useEffect(() => {
+    let alive = true;
+    setAssocs(null); setSelected(null); setCandidates(null); setCustomDraft('');
+    callApi('/api/associate', { word, challenge }).then(r => {
+      if (!alive) return;
+      const list = (r && Array.isArray(r.associations)) ? r.associations.slice(0, 10) : [];
+      setAssocs(list);
+    });
+    return () => { alive = false; };
+  }, [word, challenge]);
+
+  const pickAssoc = (a) => {
+    if (!a || a === selected) return;
+    setSelected(a);
+    setCandidates(null);
+    setCandidatesLoading(true);
+    callApi('/api/connect', { word, challenge, association: a }).then(r => {
+      const list = (r && Array.isArray(r.candidates)) ? r.candidates.slice(0, 6) : [];
+      setCandidates(list);
+      setCandidatesLoading(false);
+    });
+  };
+
+  const addOwnAssoc = () => {
+    const t = customDraft.trim().toLowerCase();
+    if (!t) return;
+    setAssocs(prev => prev && prev.includes(t) ? prev : [...(prev||[]), t]);
+    setCustomDraft('');
+    pickAssoc(t);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity:0, y: 30 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}
+      transition={{ duration:0.35 }}
+      className="mt-12"
+    >
+      {/* header */}
+      <div className="flex items-baseline gap-3 mb-6 border-t border-ink/15 pt-5">
+        <span className="text-[10px] font-mono tracking-[0.3em] text-ink/45 uppercase">on</span>
+        <span className="font-serif italic text-xl text-ink/90">{word}</span>
+        <span className="inline-emoji text-xl">{emoji}</span>
+        <button onClick={onReseedClose} className="ml-auto text-[11px] font-mono uppercase tracking-[0.3em] text-ink/55 hover:text-ink">close ×</button>
+      </div>
+
+      {/* step 2: associations — typed inline like the opening, each association clickable */}
+      {assocs === null
+        ? <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink/40 py-2">mining…<span className="caret">▍</span></div>
+        : <TypedAssocs word={word} items={assocs} selected={selected} onPick={pickAssoc}/>}
+
+      {/* add-your-own */}
+      <div className="mt-3 flex items-center gap-2">
+        <span className="text-ink/30 font-sans font-medium">+</span>
+        <input
+          value={customDraft}
+          onChange={e => setCustomDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') addOwnAssoc(); }}
+          placeholder="or add your own association"
+          className="bg-transparent outline-none text-sm font-sans border-b border-ink/15 focus:border-ink/60 pb-1 flex-1 max-w-[360px] placeholder:text-ink/30"
+        />
+      </div>
+
+      {/* step 3: force the bridge */}
+      {selected && (
+        <motion.div
+          initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.3 }}
+          className="mt-10 pt-5 border-t border-ink/15"
+        >
+          <div className="mb-4 text-[10px] font-mono uppercase tracking-[0.3em] text-ink/45">
+            force →&nbsp;<span className="text-ink/80 normal-case font-sans font-semibold tracking-normal">{word} · {selected}</span>
+          </div>
+
+          {candidatesLoading && (
+            <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink/40">forcing the bridge…<span className="caret">▍</span></div>
+          )}
+
+          {!candidatesLoading && candidates && candidates.length > 0 && (
+            <TypedCandidates word={word} association={selected} items={candidates}/>
+          )}
+
+          {!candidatesLoading && candidates && candidates.length === 0 && (
+            <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink/40">nothing came back · try another association</div>
+          )}
+        </motion.div>
+      )}
+
+      {/* branches — always available */}
+      <motion.div
+        initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.4, duration:0.4 }}
+        className="mt-10 pt-5 border-t border-ink/15 flex flex-wrap gap-x-5 gap-y-2 items-baseline"
+      >
+        <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-ink/45">another random word →</span>
+        {(branches||[]).map((b, i) => {
+          const e = pickEmoji(b, 1)[0];
+          return (
+            <button key={i} onClick={()=>onPickBranch(b)}
+              className="clickable-word font-sans font-black text-2xl">
+              {b}{e && <span className="inline-emoji ml-1" style={{ fontSize:'0.85em' }}>{e}</span>}
+            </button>
+          );
+        })}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────── app ───────────────────────────
+
+const PROMPTS = [
+  'a poem about my mother',
+  'name a new bank',
+  'a harbour-town NPC',
+  'a coffee tagline',
+  'the morning meeting',
+  'a series of bowls',
+];
+const SAMPLE = 'a poem about my mother';
+
+let _id = 0;
+const uid = () => `w${++_id}`;
+
+function buildWords(labels) {
+  return labels.map(label => ({
+    id: uid(), label, emojis: pickEmoji(label, 2),
+  }));
+}
+
+function App() {
+  const [aiOn, setAiOn] = useState(false);
+  const [challenge, setChallenge] = useState('');
+  const [draft, setDraft] = useState('');
+  const [words, setWords] = useState([]);
+  const [challengeEmojis, setChallengeEmojis] = useState([]);
+  const [picked, setPicked] = useState(null);
+  const [expansion, setExpansion] = useState(null); // { word, branches }
+  const [seeding, setSeeding] = useState(false);
+  const [saved, setSaved] = useState([]);
+
+  // check AI status but don't auto-cast — show the entry screen first
+  useEffect(() => {
+    fetch('/api/status').then(r=>r.json()).then(d => setAiOn(!!d.ai)).catch(()=>{});
+  }, []);
+
+  const reset = () => {
+    resetEmojiUsage();
+    setWords([]); setChallenge(''); setDraft(''); setPicked(null); setExpansion(null);
+  };
+
+  const cast = (text) => {
+    resetEmojiUsage();
+    setSeeding(true);
+    setChallenge(text);
+    setChallengeEmojis(pickEmoji(text, 1));
+    setPicked(null); setExpansion(null);
+    setWords(buildWords(pickRandoms(5)));
+    setSeeding(false);
+  };
+
+  const pickWord = (id) => {
+    const w = words.find(x => x.id === id);
+    if (w) expandWord(w, words);
+  };
+
+  const expandWord = (w, sentenceWords) => {
+    setPicked(w.id);
+    const branches = pickRandoms(4, [w.label, ...sentenceWords.map(s => s.label)]);
+    setExpansion({ word: w.label, branches });
+  };
+
+  const pickBranch = (b) => {
+    // add to the sentence AND immediately expand the new word so user can keep drilling
+    const w = { id: uid(), label: b, emojis: pickEmoji(b, 1) };
+    const next = [...words, w];
+    setWords(next);
+    expandWord(w, next);
+  };
+
+  const addOwnWord = (label) => {
+    const t = label.trim();
+    if (!t) return;
+    const w = { id: uid(), label: t, emojis: pickEmoji(t, 1) };
+    const next = [...words, w];
+    setWords(next);
+    expandWord(w, next);
+  };
+
+  const closeExpansion = () => { setExpansion(null); setPicked(null); };
+
+  const started = words.length > 0 || seeding;
+
+  return (
+    <div className="min-h-full pb-[140px]">
+      {/* main composition */}
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-8 pt-12 sm:pt-24 pb-16">
+
+        {/* ENTRY SCREEN — no started session yet */}
+        {!started && <EntryScreen draft={draft} setDraft={setDraft} onCast={cast} prompts={PROMPTS}/>}
+
+        {/* THE FLOWING SENTENCE */}
+        {!seeding && words.length > 0 && (
+          <TypedSentence
+            key={challenge}
+            challenge={challenge}
+            challengeEmojis={challengeEmojis}
+            words={words}
+            picked={picked}
+            onPick={pickWord}
+          />
+        )}
+        {seeding && (
+          <div className="font-sans font-black text-[clamp(30px,5.25vw,81px)] leading-[0.95] tracking-tight text-ink/30">
+            seeding…<span className="caret">▍</span>
+          </div>
+        )}
+
+        {/* add your own word — types in inline with the sentence */}
+        {started && !seeding && <AddOwnWord onAdd={addOwnWord} />}
+
+        {/* footnote */}
+        {started && !expansion && !seeding && (
+          <div className="mt-4 font-mono text-[11px] tracking-[0.2em] uppercase text-ink/55">
+            ↳ click any random word to mine it · or type your own · ↻ new in the bar below
+          </div>
+        )}
+
+        {/* EXPANSION */}
+        <AnimatePresence>
+          {expansion && (
+            <ExpansionBlock
+              key={expansion.word}
+              word={expansion.word}
+              challenge={challenge}
+              branches={expansion.branches}
+              onPickBranch={pickBranch}
+              onReseedClose={closeExpansion}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* bottom bar — fixed */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-[#f4f5f7]">
+        <div className="border-t border-ink/30 mx-4 sm:mx-6"/>
+        <div className="px-4 sm:px-8 py-3 flex items-center justify-between gap-3 text-[9px] sm:text-[10px] font-mono tracking-[0.25em] sm:tracking-[0.3em] uppercase text-ink/55">
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="text-ink font-bold tracking-[0.2em] sm:tracking-[0.25em] whitespace-nowrap">IDEA SEEDS</span>
+            <span className="text-ink/35 hidden sm:inline">/ lateral thinking</span>
+          </span>
+          <span className="flex items-center gap-3 whitespace-nowrap">
+            {started && (
+              <button onClick={reset} className="hover:text-ink underline-offset-4 hover:underline">↻ new</button>
+            )}
+            <span><span className="hidden sm:inline">{aiOn ? 'live · ' : 'mock · '}</span>№ {String(words.length).padStart(3,'0')}<span className="hidden sm:inline"> · {new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span></span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────── entry screen ───────────────────────────
+
+function EntryScreen({ draft, setDraft, onCast, prompts }) {
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current && inputRef.current.focus(); }, []);
+  return (
+    <div className="min-h-[60vh] flex flex-col justify-center">
+      <div className="text-[10px] font-mono tracking-[0.35em] uppercase text-ink/45 mb-5">/ random word association · de bono</div>
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && draft.trim()) onCast(draft.trim()); }}
+        placeholder="what are you thinking about?"
+        className="bg-transparent outline-none w-full font-sans font-black text-[clamp(30px,5.25vw,81px)] leading-[0.95] tracking-tight placeholder:text-ink/25 caret-accent"
+      />
+      <div className="mt-8 font-mono text-[11px] tracking-[0.2em] uppercase text-ink/45">
+        press <span className="border border-ink/40 px-1.5 py-0.5">enter</span> — pull a random word, mine it, force the bridge
+      </div>
+      <div className="mt-10 flex flex-wrap gap-x-5 gap-y-2 items-baseline">
+        <span className="text-[10px] font-mono tracking-[0.25em] uppercase text-ink/35">try one</span>
+        {prompts.map(p => (
+          <button key={p} onClick={()=>{ setDraft(p); onCast(p); }}
+            className="text-[13px] font-mono lowercase hover:underline underline-offset-2 text-ink/65 hover:text-ink">{p}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+try {
+  if (!motion) throw new Error('framer-motion failed to load');
+  createRoot(document.getElementById('root')).render(<App/>);
+} catch (e) {
+  document.getElementById('root').innerHTML = '<pre style="padding:24px;color:#b00;white-space:pre-wrap">'+(e&&e.message||e)+'</pre>';
+  console.error(e);
+}
+</script>
+</body>
+</html>
