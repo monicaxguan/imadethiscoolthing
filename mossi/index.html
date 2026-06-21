@@ -665,7 +665,7 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
           )}
 
           {explanationDone && (
-            <ArenaImages keyword={word} />
+            <ArenaImages keyword={`${word} ${selected}`} />
           )}
 
           {/* the user's own bridge */}
