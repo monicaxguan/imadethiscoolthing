@@ -482,6 +482,65 @@ function TypedAssocs({ word, items, selected, onPick }) {
   );
 }
 
+function ArenaImages({ keyword }) {
+  const [images, setImages] = useState(null); // null=loading, []=none, [...]=ready
+  useEffect(() => {
+    if (!keyword) return;
+    setImages(null);
+    fetch(`https://api.are.na/v2/search/blocks?q=${encodeURIComponent(keyword)}&per=12`)
+      .then(r => r.json())
+      .then(d => {
+        const imgs = (d.blocks || [])
+          .filter(b => b.class === 'Image' && b.image && (b.image.display || b.image.large || b.image.original))
+          .slice(0, 8)
+          .map(b => ({
+            url: (b.image.display || b.image.large || b.image.original).url,
+            source_url: b.source && b.source.url,
+            title: b.title || '',
+          }));
+        setImages(imgs);
+      })
+      .catch(() => setImages([]));
+  }, [keyword]);
+
+  if (images === null) return (
+    <div className="mt-6 font-mono text-[10px] uppercase tracking-[0.3em] text-ink/30">
+      searching are.na<span className="caret">▍</span>
+    </div>
+  );
+  if (!images.length) return null;
+
+  return (
+    <div className="mt-6">
+      <div className="mb-2 text-[10px] font-mono uppercase tracking-[0.3em] text-ink/45 flex items-center gap-2">
+        <span>are.na</span>
+        <span className="text-ink/25">·</span>
+        <span className="normal-case font-sans font-semibold tracking-normal text-ink/60">{keyword}</span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+        {images.map((img, i) => (
+          <a
+            key={i}
+            href={img.source_url || '#'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 block"
+            style={{ cursor: img.source_url ? 'pointer' : 'default' }}
+            onClick={e => { if (!img.source_url) e.preventDefault(); }}
+          >
+            <img
+              src={img.url}
+              alt={img.title}
+              className="h-40 w-auto object-cover"
+              style={{ display: 'block', maxWidth: '220px' }}
+            />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TypedExplanation({ word, association, text }) {
   // type one bridging paragraph
   const [shown, setShown] = useState(0);
@@ -522,7 +581,10 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
     setUserBridge(''); setUserBridgeDraft('');
     callApi('/api/associate', { word, challenge }).then(r => {
       if (!alive) return;
-      const list = (r && Array.isArray(r.associations)) ? r.associations.slice(0, 10) : [];
+      const list = (r && Array.isArray(r.associations)) ? r.associations.slice(0, 10) : [
+        'drawn to light', 'removed when done', 'temporary', 'climbable', 'holds something up',
+        'exposed to weather', 'ugly but necessary', 'public structure',
+      ];
       setAssocs(list);
     });
     return () => { alive = false; };
@@ -598,6 +660,10 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
 
           {!explanationLoading && explanation === '' && (
             <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink/40">nothing came back · try another association</div>
+          )}
+
+          {!explanationLoading && (
+            <ArenaImages keyword={selected} />
           )}
 
           {/* the user's own bridge */}
