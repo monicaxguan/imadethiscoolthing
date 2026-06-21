@@ -667,7 +667,7 @@ function ExpansionBlock({ word, challenge, branches, onPickBranch, onReseedClose
             <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink/40">nothing came back · try another association</div>
           )}
 
-          {explanationDone && (
+          {!explanationLoading && explanation && (
             <ArenaImages keyword={word} />
           )}
 
