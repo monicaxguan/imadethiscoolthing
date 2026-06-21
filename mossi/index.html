@@ -457,7 +457,7 @@ function TypedAssocs({ word, items, selected, onPick }) {
   const done = segIdx >= segments.length;
 
   return (
-    <div className="font-sans font-black text-[clamp(18px,2.6vw,38px)] leading-[1.15] tracking-tight text-ink">
+    <div className="font-sans font-black text-[clamp(13px,2.6vw,38px)] leading-[1.3] tracking-tight text-ink">
       {segments.map((seg, i) => {
         if (i > segIdx) return null;
         const partial = i === segIdx ? seg.text.slice(0, letterCount) : seg.text;
